@@ -26,24 +26,24 @@ void setup() {
   // Initialize the toggle switch pins and state
   pinMode(PIN_TOGGLE_CONSTANT, INPUT_PULLUP);
   pinMode(PIN_TOGGLE_RANDOM, INPUT_PULLUP);
+  randomSeed(analogRead(A0));
 
   if (player.begin(softwareSerial)) {
     Serial.println("Initialized DFM!");
     player.setTimeOut(2000);
     player.volume(VOLUME_LEVEL);
     player.disableLoop();
-
     if (digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) {
       Serial.println("Static clip being played");
       player.readFileCountsInFolder(ROOT_FOLDER);
       player.play(1); // First file in root will always be ALWAYS_ON.mp3 for this toggle
     } else if (digitalRead(PIN_TOGGLE_RANDOM) == HIGH) {
       Serial.println("Random clip being played");
-      randomSeed(analogRead(A0));
       int fileCountInRandom = player.readFileCountsInFolder(RANDOM_FOLDER);
-      int rngFileNumber = random(1, fileCountInRandom + 1);
+      Serial.println(fileCountInRandom);
+      int rngFileNumber = random(1, fileCountInRandom);
       Serial.println(rngFileNumber);
-      player.play(rngFileNumber);
+      player.playFolder(RANDOM_FOLDER, rngFileNumber);
     } else {
       Serial.println("There was an issue with the toggle switch");
     }
