@@ -8,13 +8,13 @@ static const uint8_t PIN_TOGGLE_CONSTANT = 12;
 static const uint8_t PIN_TOGGLE_RANDOM = 13;
 
 // Params
-static const uint8_t VOLUME_LEVEL = 30;
-static const uint8_t ROOT_FOLDER = 0;
-static const uint8_t RANDOM_FOLDER = 1;
+static const uint8_t VOLUME_LEVEL = 20;
+static const uint8_t MP3_FOLDER = 1;
 
 // States
-//static uint8_t toggleStateConstant = 0;
-//static uint8_t toggleStateRandom = 0;
+static uint8_t toggleState = 0;
+static const uint8_t TOGGLE_STATE_CONSTANT_ACTIVE = 1;
+static const uint8_t TOGGLE_STATE_RANDOM_ACTIVE = 2;
 
 SoftwareSerial softwareSerial(PIN_DFM_RX, PIN_DFM_TX);
 DFRobotDFPlayerMini player;
@@ -27,89 +27,50 @@ void setup() {
   pinMode(PIN_TOGGLE_CONSTANT, INPUT_PULLUP);
   pinMode(PIN_TOGGLE_RANDOM, INPUT_PULLUP);
   randomSeed(analogRead(A0));
-
+  
   if (player.begin(softwareSerial)) {
     Serial.println("Initialized DFM!");
     player.setTimeOut(2000);
     player.volume(VOLUME_LEVEL);
     player.disableLoop();
-    if (digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) {
-      Serial.println("Static clip being played");
-      player.readFileCountsInFolder(ROOT_FOLDER);
-      player.play(1); // First file in root will always be ALWAYS_ON.mp3 for this toggle
-    } else if (digitalRead(PIN_TOGGLE_RANDOM) == HIGH) {
-      Serial.println("Random clip being played");
-      int fileCountInRandom = player.readFileCountsInFolder(RANDOM_FOLDER);
-      Serial.println(fileCountInRandom);
-      int rngFileNumber = random(1, fileCountInRandom);
-      Serial.println(rngFileNumber);
-      player.playFolder(RANDOM_FOLDER, rngFileNumber);
-    } else {
-      Serial.println("There was an issue with the toggle switch");
-    }
-
-
-
-
+    playClip();
   } else {
     Serial.println("There was an issue initializing DFM!");
   }
 }
 
-void loop() {}
-  //  Serial.println("ALL");
-  //  Serial.println(hasToggleStateChanged());
-  //  if (digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) {
-  //    toggleStateConstant = 1;
-  //  } else {
-  //    toggleStateConstant = 0;
-  //  }
-  //
-  //  if (digitalRead(PIN_TOGGLE_RANDOM) == HIGH) {
-  //    toggleStateRandom = 1;
-  //  } else {
-  //    toggleStateRandom = 0;
-  //  }
-  //
-  //
-  //  if (hasToggleStateChanged == true) {
-  //    player.pause();
-  //    playClip();
-  //  }
-//}
-//
-//void playClip() {
-//  if (digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) {
-//    toggleStateConstant = 1;
-//    toggleStateRandom = 0;
-//    player.readFileCountsInFolder(ROOT_FOLDER);
-//    player.play(1); // First file in root will always be ALWAYS_ON.mp3 for this toggle
-//  } else if (digitalRead(PIN_TOGGLE_RANDOM) == HIGH) {
-//    toggleStateRandom = 1;
-//    toggleStateConstant = 0;
-//    randomSeed(analogRead(A0));
-//    int fileCountInRandom = player.readFileCountsInFolder(RANDOM_FOLDER);
-//    int rngFileNumber = random(1, fileCountInRandom);
-//    player.play(rngFileNumber);
-//  } else {
-//    Serial.println("There was an issue with the toggle switch!");
-//  }
-//}
-//
-//
-//bool hasToggleStateChanged() {
-//  if (((digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) && toggleStateConstant == 0)) {
-//    toggleStateConstant = 1;
-//    return true;
-//  } else if (((digitalRead(PIN_TOGGLE_CONSTANT) == LOW) && toggleStateConstant == 1)) {
-//    toggleStateRandom = 0;
-//    return true;
-//  } else if (((digitalRead(PIN_TOGGLE_RANDOM) == HIGH) && toggleStateRandom == 0)) {
-//    toggleStateRandom = 1;
-//    return true;
-//  } else if (((digitalRead(PIN_TOGGLE_RANDOM) == LOW) && toggleStateRandom == 1)) {
-//    toggleStateRandom = 0;
-//    return true;
-//  }
-//  return false;
-//}
+void loop() {
+  if (hasConstantToggleStateChanged() || hasRandomToggleStateChanged()) {
+    Serial.println("Toggle setting changed");
+    player.pause();
+    playClip();
+  }
+  delay(250);
+}
+
+
+void playClip() {
+  if (digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) {
+    Serial.println("Static clip is being played");
+    toggleState = TOGGLE_STATE_CONSTANT_ACTIVE;
+    player.readFileCountsInFolder(MP3_FOLDER);
+    player.playFolder(MP3_FOLDER, 1);
+  } else if (digitalRead(PIN_TOGGLE_RANDOM) == HIGH) {
+    Serial.println("Random clip is being played");
+    toggleState = TOGGLE_STATE_RANDOM_ACTIVE;
+    int fileCountInRandom = player.readFileCountsInFolder(MP3_FOLDER);
+    int rngFileNumber = random(1, fileCountInRandom);
+    player.playFolder(MP3_FOLDER, rngFileNumber);
+  } else {
+    Serial.println("There was an issue with the toggle switch");
+  }
+
+}
+
+boolean hasConstantToggleStateChanged() {
+  return (digitalRead(PIN_TOGGLE_CONSTANT) == LOW) && (toggleState == TOGGLE_STATE_CONSTANT_ACTIVE) || (digitalRead(PIN_TOGGLE_CONSTANT) == HIGH) && (toggleState != TOGGLE_STATE_CONSTANT_ACTIVE);
+}
+
+boolean hasRandomToggleStateChanged() {
+  return (digitalRead(PIN_TOGGLE_RANDOM) == LOW) && (toggleState == TOGGLE_STATE_RANDOM_ACTIVE) || (digitalRead(PIN_TOGGLE_RANDOM) == HIGH) && (toggleState != TOGGLE_STATE_RANDOM_ACTIVE);
+}
